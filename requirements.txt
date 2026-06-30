@@ -8,3 +8,7 @@ scikit-image
 altair
 torchxrayvision
 cooler
+scikit-learn
+matplotlib
+tqdm
+opencv-python-headless
