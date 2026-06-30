@@ -1,0 +1,10 @@
+streamlit
+torch
+torchvision
+Pillow
+numpy
+pandas
+scikit-image
+altair
+torchxrayvision
+cooler
