@@ -93,8 +93,8 @@ def inject_css() -> None:
 
         .block-container {
             max-width: 1400px;
-            padding-top: 0.9rem;
-            padding-bottom: 3rem;
+            padding-top: 2rem !important;
+            padding-bottom: 3rem !important;
         }
 
         [data-testid="stSidebar"] {
@@ -109,9 +109,15 @@ def inject_css() -> None:
             background:
                 linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(239, 246, 255, 0.94) 46%, rgba(236, 253, 245, 0.92) 100%);
             box-shadow: 0 16px 36px rgba(15, 23, 42, 0.10);
+            margin-top: 1rem !important;
             margin-bottom: 0.65rem;
             position: relative;
-            overflow: hidden;
+            overflow: visible !important;
+        }
+
+        .hero-card {
+            margin-top: 1rem !important;
+            overflow: visible !important;
         }
 
         .hero::after {
@@ -129,7 +135,15 @@ def inject_css() -> None:
             display: flex;
             gap: 0.45rem;
             align-items: center;
+            margin-top: 0.25rem;
             margin-bottom: 0.45rem;
+            overflow: visible !important;
+        }
+
+        .hero-badge-row {
+            margin-top: 0.25rem;
+            margin-bottom: 1rem;
+            overflow: visible !important;
         }
 
         .hero h1 {
@@ -158,7 +172,9 @@ def inject_css() -> None:
             display: flex;
             gap: 0.5rem;
             flex-wrap: wrap;
-            margin-top: 0.65rem;
+            margin-top: 0.25rem;
+            margin-bottom: 1rem;
+            overflow: visible !important;
         }
 
         .badge {
@@ -1077,6 +1093,43 @@ def absolute_difference_map(query_image: Image.Image, retrieved_image: Image.Ima
     return Image.fromarray((heatmap * 255).astype(np.uint8), mode="RGB")
 
 
+def is_likely_xray_image(image: Image.Image) -> tuple[bool, list[str]]:
+    """Transparent input check for CXR-like uploads; not a clinical classifier."""
+    rgb = np.asarray(image.convert("RGB").resize((224, 224)), dtype=np.float32)
+    gray = np.asarray(image.convert("L").resize((224, 224)), dtype=np.float32)
+    width, height = image.size
+    aspect_ratio = width / max(1, height)
+
+    rg_diff = np.mean(np.abs(rgb[..., 0] - rgb[..., 1]))
+    rb_diff = np.mean(np.abs(rgb[..., 0] - rgb[..., 2]))
+    gb_diff = np.mean(np.abs(rgb[..., 1] - rgb[..., 2]))
+    mean_channel_diff = float((rg_diff + rb_diff + gb_diff) / 3.0)
+    gray_std = float(gray.std())
+
+    reasons = []
+    if not 0.5 <= aspect_ratio <= 2.0:
+        reasons.append(f"Aspect ratio {aspect_ratio:.2f} is outside the radiograph-like range 0.5-2.0.")
+    if mean_channel_diff > 22.0:
+        reasons.append(f"Color-channel difference is high ({mean_channel_diff:.1f}); CXR images are usually near-grayscale.")
+    elif mean_channel_diff > 12.0:
+        reasons.append(f"Color-channel difference is moderately high ({mean_channel_diff:.1f}).")
+    if gray_std < 25.0:
+        reasons.append(f"Grayscale contrast is low ({gray_std:.1f}); medical radiographs usually have broader intensity contrast.")
+
+    is_likely = 0.5 <= aspect_ratio <= 2.0 and mean_channel_diff <= 22.0 and gray_std >= 25.0
+    if is_likely and not reasons:
+        reasons.append("Image is near-grayscale, has reasonable aspect ratio, and has sufficient intensity contrast.")
+    return is_likely, reasons
+
+
+def input_domain_status(domain_check: dict | None) -> str:
+    if domain_check is None:
+        return "Dataset image"
+    if domain_check["is_likely_xray"]:
+        return "Likely CXR-like image"
+    return "Uncertain" if len(domain_check["reasons"]) == 1 else "Out-of-domain image"
+
+
 def matrix_to_heatmap_image(matrix: np.ndarray, colormap: str = "viridis") -> Image.Image:
     matrix = np.asarray(matrix, dtype=np.float32)
     min_value = float(matrix.min())
@@ -1337,7 +1390,7 @@ def calculate_retrieval_quality(
             "precision_at_k": None,
             "mean_similarity": mean_similarity,
             "top_similarity": top_similarity,
-            "note": "Label agreement unavailable for uploaded image",
+            "note": "Ground-truth label unavailable for uploaded image.",
         }
 
     result_labels = get_result_labels(results, labels)
@@ -1375,6 +1428,7 @@ def confidence_badge(confidence: str) -> str:
         "High": "badge badge-high",
         "Medium": "badge badge-medium",
         "Low": "badge badge-low",
+        "Out-of-domain / Low": "badge badge-low",
     }[confidence]
     return f'<span class="{badge_class}">{confidence} retrieval confidence</span>'
 
@@ -1554,6 +1608,30 @@ def show_query_analysis_card(
         st.markdown(key_value_rows(rows), unsafe_allow_html=True)
 
 
+def show_input_domain_check_card(domain_check: dict | None) -> None:
+    if domain_check is None:
+        return
+
+    status = input_domain_status(domain_check)
+    badge_class = "badge-high" if status == "Likely CXR-like image" else "badge-medium" if status == "Uncertain" else "badge-low"
+    with st.container(border=True):
+        st.markdown('<div class="section-title">Input domain check</div>', unsafe_allow_html=True)
+        st.markdown(f'<span class="badge {badge_class}">{escape(status)}</span>', unsafe_allow_html=True)
+        if status != "Likely CXR-like image":
+            st.warning(
+                "This uploaded image does not appear to be a chest X-ray. "
+                "CXR retrieval results may be meaningless."
+            )
+            st.info(
+                "Out-of-domain upload detected. Please upload a chest X-ray image for CXR retrieval, "
+                "or use custom uploaded gallery retrieval for non-CXR images."
+            )
+        with st.expander("Input validation notes", expanded=False):
+            for reason in domain_check["reasons"]:
+                st.write(f"- {reason}")
+            st.caption("This is transparent input validation, not a clinical claim or image diagnosis.")
+
+
 def get_result_labels(results: pd.DataFrame, labels: np.ndarray) -> list[str]:
     return [str(labels[int(index)]) for index in results["index"]]
 
@@ -1563,36 +1641,47 @@ def show_summary_card(
     labels: np.ndarray,
     quality: dict[str, float | int | str | None],
     query_index: int | None,
+    domain_check: dict | None = None,
 ) -> None:
     result_labels = get_result_labels(results, labels)
     normal_count = result_labels.count("NORMAL")
     pneumonia_count = result_labels.count("PNEUMONIA")
     top_index = int(results.iloc[0]["index"])
-    confidence = retrieval_confidence_label(quality, uploaded=query_index is None)
+    is_uploaded = query_index is None
+    is_out_of_domain = is_uploaded and domain_check is not None and not bool(domain_check["is_likely_xray"])
 
     with st.container(border=True):
         st.markdown('<div class="section-title">Retrieval Summary</div>', unsafe_allow_html=True)
+        top_label_name = "Top retrieved dataset label" if is_uploaded else "Top retrieved label"
+        metric_items = [
+            (top_label_name, escape(str(labels[top_index]))),
+            ("Top similarity", f"{float(results.iloc[0]['similarity']):.3f}"),
+            ("Retrieved", str(len(results))),
+        ]
+        if not is_out_of_domain:
+            metric_items.extend([("NORMAL", str(normal_count)), ("PNEUMONIA", str(pneumonia_count))])
         st.markdown(
-            metric_grid(
-                [
-                    ("Top match label", escape(str(labels[top_index]))),
-                    ("Top similarity", f"{float(results.iloc[0]['similarity']):.3f}"),
-                    ("Retrieved", str(len(results))),
-                    ("NORMAL", str(normal_count)),
-                    ("PNEUMONIA", str(pneumonia_count)),
-                ],
-                "metric-grid-5",
-            ),
+            metric_grid(metric_items, "metric-grid-5" if len(metric_items) > 3 else "metric-grid-3"),
             unsafe_allow_html=True,
         )
+        st.caption("This is not a predicted label. Retrieved dataset labels are nearest-neighbor metadata, not diagnoses.")
+        if is_out_of_domain:
+            with st.expander("Nearest CXR dataset labels, for debugging only", expanded=True):
+                st.warning("These NORMAL/PNEUMONIA counts are nearest CXR dataset labels only and may be meaningless for this upload.")
+                st.markdown(
+                    metric_grid([("NORMAL", str(normal_count)), ("PNEUMONIA", str(pneumonia_count))], "metric-grid-3"),
+                    unsafe_allow_html=True,
+                )
 
 
 def show_retrieval_quality_card(
     results: pd.DataFrame,
     quality: dict[str, float | int | str | None],
     query_index: int | None,
+    domain_check: dict | None = None,
 ) -> None:
-    confidence = retrieval_confidence_label(quality, uploaded=query_index is None)
+    is_out_of_domain = query_index is None and domain_check is not None and not bool(domain_check["is_likely_xray"])
+    confidence = "Out-of-domain / Low" if is_out_of_domain else retrieval_confidence_label(quality, uploaded=query_index is None)
     with st.container(border=True):
         st.markdown('<div class="section-title">Retrieval Quality</div>', unsafe_allow_html=True)
         if query_index is None:
@@ -1642,11 +1731,15 @@ def show_retrieval_triage(
     query_label: str,
     query_index: int | None,
     query_source: str,
+    domain_check: dict | None = None,
 ) -> None:
     result_labels = get_result_labels(results, labels)
     normal_count = result_labels.count("NORMAL")
     pneumonia_count = result_labels.count("PNEUMONIA")
-    if normal_count > pneumonia_count:
+    is_out_of_domain = query_index is None and domain_check is not None and not bool(domain_check["is_likely_xray"])
+    if is_out_of_domain:
+        pattern = "Out-of-domain; labels debugging only"
+    elif normal_count > pneumonia_count:
         pattern = "NORMAL-majority"
     elif pneumonia_count > normal_count:
         pattern = "PNEUMONIA-majority"
@@ -1673,6 +1766,8 @@ def show_retrieval_triage(
             ),
             unsafe_allow_html=True,
         )
+        if is_out_of_domain:
+            st.caption("For non-CXR images, use custom uploaded gallery retrieval instead of CXR-index retrieval.")
 
 
 def show_topk_sensitivity(
@@ -2707,6 +2802,10 @@ def render_retrieval_dashboard(
 ) -> None:
     results = retrieve_similar(query_embedding, embeddings.copy(), top_k=top_k, query_index=query_index)
     quality = calculate_retrieval_quality(results, labels, query_label, query_index)
+    domain_check = None
+    if query_index is None:
+        is_likely_xray, reasons = is_likely_xray_image(query_image)
+        domain_check = {"is_likely_xray": is_likely_xray, "reasons": reasons}
     st.session_state["last_retrieval_context"] = {
         "query_filename": filename,
         "query_label": query_label,
@@ -2720,13 +2819,14 @@ def render_retrieval_dashboard(
         show_query_card(query_image, filename, query_label, query_source)
     with analysis_col:
         show_query_analysis_card(query_image, query_embedding, filename, query_label, query_source)
+        show_input_domain_check_card(domain_check)
 
-    show_summary_card(results, labels, quality, query_index)
-    show_retrieval_quality_card(results, quality, query_index)
+    show_summary_card(results, labels, quality, query_index, domain_check)
+    show_retrieval_quality_card(results, quality, query_index, domain_check)
 
     triage_col, model_col = st.columns(2, gap="large")
     with triage_col:
-        show_retrieval_triage(results, labels, query_label, query_index, query_source)
+        show_retrieval_triage(results, labels, query_label, query_index, query_source, domain_check)
     with model_col:
         show_model_card(metadata)
 
@@ -2761,6 +2861,10 @@ def render_retrieval_dashboard(
             index=0,
         )
 
+    is_out_of_domain_upload = domain_check is not None and not bool(domain_check["is_likely_xray"])
+    if is_out_of_domain_upload:
+        st.warning("For non-CXR retrieval, upload a custom reference gallery instead of using the CXR index.")
+
     if retrieval_chart_view == "Graph":
         chart_col, distribution_col = st.columns([1.15, 0.85], gap="large")
         with chart_col:
@@ -2770,7 +2874,14 @@ def render_retrieval_dashboard(
 
         with distribution_col:
             with st.container(border=True):
-                st.markdown('<div class="section-title">Label Distribution</div>', unsafe_allow_html=True)
+                distribution_title = (
+                    "Nearest CXR dataset labels, for debugging only"
+                    if is_out_of_domain_upload
+                    else "Retrieved Label Distribution"
+                )
+                st.markdown(f'<div class="section-title">{distribution_title}</div>', unsafe_allow_html=True)
+                if is_out_of_domain_upload:
+                    st.caption("These are nearest-neighbor dataset labels, not predictions for the uploaded image.")
                 show_label_distribution(results, labels)
     else:
         similarity_table = pd.DataFrame(
@@ -2802,7 +2913,14 @@ def render_retrieval_dashboard(
                 )
         with data_col2:
             with st.container(border=True):
-                st.markdown('<div class="section-title">Label Distribution</div>', unsafe_allow_html=True)
+                distribution_title = (
+                    "Nearest CXR dataset labels, for debugging only"
+                    if is_out_of_domain_upload
+                    else "Retrieved Label Distribution"
+                )
+                st.markdown(f'<div class="section-title">{distribution_title}</div>', unsafe_allow_html=True)
+                if is_out_of_domain_upload:
+                    st.caption("These are nearest-neighbor dataset labels, not predictions for the uploaded image.")
                 st.dataframe(
                     distribution_table,
                     hide_index=True,

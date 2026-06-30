@@ -59,6 +59,8 @@ Features:
 - Retrieves top-k visually similar images with cosine similarity
 - Avoids returning the same image as the top result for dataset queries
 - Shows query image, query filename, query label, image resolution, embedding dimension, and query source
+- For uploaded CXR-index queries, runs a transparent input-domain check that looks for CXR-like grayscale, aspect ratio, and contrast properties
+- Flags likely out-of-domain uploads, such as posters or banners, before interpreting CXR nearest-neighbor results
 - Uses colored clinical-style labels for `NORMAL`, `PNEUMONIA`, agreement state, and retrieval confidence
 - Includes a compact model card with encoder, embedding dimension, similarity metric, dataset, and clinical status
 - Adds a clinical-style retrieval triage panel for query source, majority retrieved pattern, agreement, similarity range, and review status
@@ -69,6 +71,9 @@ Features:
 - Shows Top-k sensitivity for Top-3, Top-5, and Top-10 label agreement when the query label is known
 - Shows a retrieval confidence badge using a simple heuristic based on top similarity and, when available, Precision@K
 - Makes clear that retrieval confidence is not clinical or diagnostic confidence
+- Uses safer uploaded-query wording such as **Top retrieved dataset label** and states that retrieved labels are nearest-neighbor metadata, not predicted labels or diagnoses
+- For out-of-domain uploads, marks retrieval confidence as **Out-of-domain / Low**, hides label agreement metrics as unavailable, and shows NORMAL/PNEUMONIA nearest labels only as debugging context
+- Recommends custom uploaded-gallery retrieval for non-CXR images instead of using the CXR index
 - Renames retrieved examples as a **Similar Case Board**
 - Shows rank, filename, label badge, cosine similarity, query-label agreement, and a progress bar on each result card
 - Includes a compact result table with rank, filename, label, cosine similarity, and label agreement
@@ -341,6 +346,15 @@ Retrieval confidence is a heuristic:
 - Low confidence otherwise
 - Uploaded images use top similarity only because query-label agreement is unavailable
 
+Uploaded CXR-index queries also run a simple out-of-domain input check before retrieval summaries are shown. The check uses transparent image heuristics only:
+
+- whether the image is mostly grayscale
+- whether the aspect ratio is roughly radiograph-like
+- whether the image is highly colorful
+- whether grayscale contrast is sufficient for a medical-image-like input
+
+This check is not a clinical classifier. If an uploaded image appears out of domain, the app still allows nearest-neighbor retrieval but warns that results may be meaningless and displays nearest CXR dataset labels only as debugging metadata.
+
 For super-resolution, each image is:
 
 1. Converted safely to RGB
@@ -367,6 +381,7 @@ For the synthetic Hi-C mini-demo:
 - ResNet18 and ResNet50 are pretrained on natural images, not chest X-rays.
 - TorchXRayVision support requires optional dependency installation and a separately built index.
 - Retrieval results show visual similarity, not clinical equivalence.
+- The CXR retrieval module is intended for chest X-ray-like inputs. Out-of-domain images may still produce nearest-neighbor results, but these are not meaningful and are flagged by the app.
 - Retrieval confidence is not clinical confidence.
 - Retrieval triage is a research dashboard summary, not clinical triage.
 - Query-vs-retrieved difference maps are visual comparison aids, not finding maps.
