@@ -5,3 +5,8 @@ maxUploadSize = 500
 gatherUsageStats = false
 
 enableXsrfProtection = false
+
+
+headless = true
+
+
