@@ -19,13 +19,13 @@ The goal is **not diagnosis**. The goal is **visual evaluation**: helping resear
 
 ---
 
-## Live Demo
+## Demo Status
 
-Try the deployed app here:
+The full local dashboard is shown in the screenshots below.
 
-**https://huggingface.co/spaces/Mahrufa/BioMedVisionLab**
+A Hugging Face Spaces deployment was prepared with Docker, but the public hosted version is currently paused while upload-only deployment behavior is being stabilized. The recommended way to review the complete project is through the screenshots and the local setup instructions.
 
-Hosted demo mode is intended for small uploaded samples. Large datasets, full benchmarks, and GPU-heavy workflows should be tested locally or on suitable research infrastructure.
+Large datasets, full CXR benchmarks, and encoder comparisons should be tested locally or on suitable research infrastructure.
 
 ---
 
@@ -237,9 +237,9 @@ Large datasets and embedding files are intentionally excluded from Git.
 
 ---
 
-## Deployment
+## Deployment-Ready Setup
 
-This project is deployed using **Docker on Hugging Face Spaces**.
+This project includes **Docker configuration for Hugging Face Spaces deployment**.
 
 The Space uses:
 
