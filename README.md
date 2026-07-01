@@ -74,95 +74,91 @@ BioMedVisionLab is designed as a reusable visual evaluation workbench for biomed
 
 ## Screenshots
 
-The screenshots below show the full local research mode of **BioMedVisionLab** with a prebuilt CXR index. They are included so reviewers can understand the project even without running the app locally.
+The screenshots below show the full local research mode of **BioMedVisionLab** with a prebuilt CXR index. The public hosted demo may run in upload-only mode, while the local version exposes the full indexed retrieval, super-resolution, and contact-map workflows.
+
+---
 
 ### 1. CXR Retrieval Workflow
 
-The CXR retrieval module visualizes query-image retrieval, embedding-based nearest neighbors, retrieval confidence, and batch evaluation.
-
 #### CXR retrieval overview
 
-![CXR Retrieval Overview](assets/cxr_retrieval_visualization.png)
+![CXR retrieval overview](assets/cxr_retrieval_overview.png)
+
+#### Sidebar controls and encoder/query selection
+
+![CXR settings sidebar collage](assets/cxr_settings_sidebar_collage.png)
 
 #### Retrieval quality, triage, and model card
 
-![Retrieval Quality, Triage, and Model Card](assets/cxr_retrieval_quality_retrieval_triage_model_card.png)
+![CXR quality, triage, and model card](assets/cxr_quality_triage_model_card.png)
 
 #### Visual explanation preview
 
-![Intensity Heatmap Preview](assets/cxr_intensity_heatmap.png)
+![CXR intensity heatmap](assets/cxr_intensity_heatmap.png)
 
-#### Query vs retrieved comparison
+#### Query versus retrieved comparison
 
-![Query vs Retrieved Comparison](assets/cxr_query_vs_retrieved_comparison.png)
-
-#### Top-k sensitivity
-
-![Top-k Sensitivity](assets/cxr_top-k_sensitivity.png)
+![CXR query versus retrieved comparison](assets/cxr_query_vs_retrieved_comparison.png)
 
 #### Similar case board
 
-![Similar Case Board](assets/cxr_similar_case_board.png)
+![CXR similar case board](assets/cxr_similar_case_board.png)
 
-#### Compact result table and similarity distribution
+#### Compact results and label distribution
 
-![Compact Result Table and Similarity Distribution](assets/cxr_compact_result_table_similarity_distribution.png)
+![CXR compact results and distributions](assets/cxr_compact_results_and_distributions.png)
+
+#### Top-k sensitivity
+
+![CXR top-k sensitivity](assets/cxr_topk_sensitivity.png)
 
 #### Batch retrieval evaluation
 
-![Batch Retrieval Evaluation](assets/cxr_batch_retrieval.png)
-
-#### Sidebar controls and encoder/query selectors
-
-![CXR Settings UI](assets/cxr_settings_comparison_ui_mockup.png)
+![CXR batch retrieval](assets/cxr_batch_retrieval.png)
 
 ---
 
 ### 2. Super-Resolution Evaluation Workflow
 
-The super-resolution module compares original, simulated low-resolution, bicubic reconstruction, and optional uploaded model outputs using PSNR, SSIM, MSE, and crop-level visual inspection.
-
 #### Super-resolution overview
 
-![Super-Resolution Overview](assets/super_resolution_overview.png)
+![Super-resolution overview](assets/sr_overview.png)
 
 #### Original, low-resolution, and bicubic enhanced images
 
-![Super-Resolution Image Conversion](assets/super_resolution_image_convert.png)
+![Super-resolution image conversion triplet](assets/sr_image_conversion_triplet.png)
 
 #### Zoomed crop comparison
 
-![Zoomed Crop Comparison](assets/sr_zoomed_crop_comparison.png)
+![Super-resolution zoomed crop comparison](assets/sr_zoomed_crop_comparison.png)
 
-#### Uploaded model output comparison
+#### Uploaded model-output comparison
 
-![Super-Resolution Method Output Comparison](assets/super_resolution_method_output_comparison.png)
+![Super-resolution method output comparison](assets/sr_method_output_comparison.png)
 
 #### Uploaded model crop comparison
 
-![Uploaded Model Crop Comparison](assets/sr_uploaded_model_crop_comparison.png)
+![Super-resolution uploaded model crop comparison](assets/sr_uploaded_model_crop_comparison.png)
 
-#### Batch super resolution comparison
+#### Batch super-resolution evaluation
 
-![Batch super resolution comparison](assets\sr_batch_super_resolution_comparison.png)
+![Super-resolution batch evaluation](assets/sr_batch_evaluation.png)
 
 ---
 
 ### 3. Hi-C / Contact Map Visualization Workflow
 
-The Grant Alignment Lab extends the same visual evaluation pattern to image-like genomic contact matrices, including uploaded CSV/NPY contact maps, synthetic contact maps, downsampling, bicubic upscaling, difference maps, and diagonal profile summaries.
-
 #### Uploaded Hi-C contact map with viridis colormap
 
-![Hi-C Contact Map Viridis](assets\grant_alignment_hi-c_contact_map_viridis.png) 
+![Grant alignment contact map viridis](assets/grant_alignment_contact_map_viridis.png)
 
 #### Uploaded Hi-C contact map with inferno colormap
 
-![Hi-C Contact Map Inferno](assets\grant_alignment_hi-c_contact_map_inferno.png) 
+![Grant alignment contact map inferno](assets/grant_alignment_contact_map_inferno.png)
 
 #### Diagonal-insulation style profile
 
-![Diagonal Insulation Style Profile](assets\grant_alignment_diagonal_insulation_style_profile.png)  
+![Grant alignment diagonal profile](assets/grant_alignment_diagonal_profile.png)
 
 
 ---
