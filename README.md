@@ -128,7 +128,7 @@ The super-resolution module compares original, simulated low-resolution, bicubic
 
 #### Original, low-resolution, and bicubic enhanced images
 
-![Super-Resolution Image Conversion](assets/super_resolutio_n_image_convert.png)
+![Super-Resolution Image Conversion](assets/super_resolution_image_convert.png)
 
 #### Zoomed crop comparison
 

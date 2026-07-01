@@ -1478,21 +1478,17 @@ def show_disclaimer() -> None:
 
 def show_startup_checks() -> None:
     available_indexes = available_encoder_indexes()
-
     if available_indexes:
         st.sidebar.success("Local CXR index available.")
     else:
-        st.sidebar.info("Hosted demo: upload-only mode available.")
+        st.sidebar.info("No local CXR index found. Upload-only mode is available.")
 
     if xrv is None:
-        st.sidebar.warning(
-            "TorchXRayVision is unavailable. Uploaded CXR embeddings can fall back to ResNet18."
-        )
+        st.sidebar.warning("TorchXRayVision is unavailable. Uploaded CXR embeddings fall back to ResNet18.")
 
     if cooler is None:
-        st.sidebar.info(
-            "cooler is unavailable. CSV/NPY contact maps are supported; .cool/.mcool upload is disabled."
-        )
+        st.sidebar.info("cooler is unavailable. .cool/.mcool upload is disabled; .csv and .npy matrices still work.")
+
 
 def sidebar_controls(image_paths: np.ndarray, labels: np.ndarray) -> tuple[int, str, int | None, object | None]:
     st.sidebar.markdown("## CXR Retrieval Settings")
@@ -2954,83 +2950,33 @@ def render_retrieval_tab(index_state: tuple[np.ndarray, np.ndarray, np.ndarray] 
         for encoder_name, config in ENCODER_CONFIGS.items()
     }
 
+    encoder_labels = list(encoder_label_to_key.keys())
+    available_labels = [
+        label
+        for label, encoder_key in encoder_label_to_key.items()
+        if encoder_index_dir(encoder_key) is not None
+    ]
+    default_encoder_index = (
+        encoder_labels.index(available_labels[0]) if available_labels else 0
+    )
+
     selected_encoder_label = st.sidebar.selectbox(
         "CXR encoder index",
-        list(encoder_label_to_key.keys()),
+        encoder_labels,
+        index=default_encoder_index,
     )
     selected_encoder_key = encoder_label_to_key[selected_encoder_label]
     selected_index_dir = encoder_index_dir(selected_encoder_key)
 
-    # ------------------------------------------------------------------
-    # Hosted / upload-only mode
-    # ------------------------------------------------------------------
     if selected_index_dir is None:
-        st.markdown(
-            """
-            <div class="info-callout">
-                <strong>Hosted upload-only mode</strong><br>
-                This public demo does not bundle the full Kaggle CXR dataset or prebuilt embeddings.
-                You can still test retrieval by uploading one query image and a small reference gallery.
-            </div>
-            """,
-            unsafe_allow_html=True,
+        st.warning(
+            f"Index not found for this encoder. Run `python build_index.py --encoder {selected_encoder_key}`."
         )
-
-        st.markdown(
-            """
-            <div class="card">
-                <h3>How to test this demo</h3>
-                <p>
-                    Upload one biomedical image as the query, then upload several reference images
-                    as the temporary gallery. The app will compute embeddings during the session and
-                    retrieve the most visually similar gallery images.
-                </p>
-                <ul>
-                    <li><strong>For CXR retrieval:</strong> upload one chest X-ray query and several chest X-ray reference images.</li>
-                    <li><strong>For non-CXR images:</strong> use a custom gallery from the same image type.</li>
-                    <li><strong>For full benchmarks:</strong> run locally and build the CXR index with <code>build_index.py</code>.</li>
-                </ul>
-            </div>
-            """,
-            unsafe_allow_html=True,
+        st.info(
+            "Upload-only retrieval is available below for temporary in-session gallery searches."
         )
-
         show_uploaded_retrieval_mode()
-
-        st.markdown(
-            """
-            <div class="warning-callout">
-                <strong>Important:</strong> Uploaded images are not classified by this app.
-                Retrieval results are nearest-neighbor matches from the uploaded reference gallery or local index.
-                They should not be interpreted as diagnosis.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
         return
-        #with st.expander("What is available in hosted mode?", expanded=True):
-           # st.markdown(
-                #"""
-                #Hosted mode supports:
-
-                #- Uploading a query image
-                #- Uploading a small reference gallery
-                #- Temporary in-session embedding extraction
-                #- Top-k visual similarity retrieval
-                #- Similarity score inspection
-                #- Super-resolution upload workflows
-                - Synthetic and uploaded contact-map visualization
-
-                #Full CXR batch benchmarks and encoder comparison require local prebuilt indexes.
-                #"""
-            #)
-
-        #return
-
-    # ------------------------------------------------------------------
-    # Local-index mode
-    # ------------------------------------------------------------------
     st.markdown(
         '<span class="badge badge-normal">Local CXR index available</span>',
         unsafe_allow_html=True,
@@ -3109,6 +3055,7 @@ def render_retrieval_tab(index_state: tuple[np.ndarray, np.ndarray, np.ndarray] 
         top_k=top_k,
         metadata=metadata,
     )
+
 
 def sr_image_options(image_paths: np.ndarray, labels: np.ndarray) -> list[str]:
     return [f"{idx}: {Path(str(path)).name} ({labels[idx]})" for idx, path in enumerate(image_paths)]
@@ -4059,9 +4006,11 @@ def main() -> None:
 
     with sr_tab:
         render_super_resolution_tab(index_state)
+        show_research_extension_roadmap()
 
     with grant_tab:
         render_grant_alignment_lab()
+        show_research_extension_roadmap()
 
 
 if __name__ == "__main__":
